@@ -208,7 +208,9 @@ public:
 void GameObject::update(Environment &ctx) {
 
     if (primaryTarget.expired()) {
+        // no target, try to acquire new one
         if(!_getNewTarget()) {
+            // no targets, can't acquire new target
             deleteSelf();
         }
     }
@@ -226,17 +228,12 @@ void GameObject::update(Environment &ctx) {
 
     float xAb = std::abs(xMov);
     float yAb = std::abs(yMov);
+    float zAb = xAb + yAb;
 
-    if (xMov != 0 && yMov != 0) {
-        xMov /= xAb + yAb; // 100 / 151 = 0.66
-        yMov /= xAb + yAb; // -51 / 151 = -0.33
-    } else {
-        if (yMov != 0)
-            yMov /= xAb + yAb;
-        if (xMov != 0)
-            xMov /= xAb + yAb;
-    }
-
+    if (xMov != 0)
+        xMov /= zAb;
+    if (yMov != 0)
+        yMov /= zAb;
 
     xMov *= mov;
     yMov *= mov;
