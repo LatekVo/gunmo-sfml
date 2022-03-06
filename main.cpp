@@ -1,23 +1,43 @@
-#include <iostream>
-#include <memory>
-
 #include <SFML/Window.hpp>
 #include <SFML/Graphics.hpp>
 #include <SFML/System.hpp>
 #include <SFML/Config.hpp>
+
 #include <list>
+#include <iostream>
+#include <memory>
 
 class Environment; // environment will actually also control all the watch-dogged data and objects that need to be constantly updated
 class GameObject;
 
-enum e_targetingType {
+enum class e_targetingType {
     NONE = 0,
-    SIMPLE, // face-on
+    // HEAD ON
+    SIMPLE,
+    // SHOOTING ALGO
     LEADING_LINEAR, // leading, assuming straight-line movement
     LEADING_QUADRATIC, // includes acceleration changes,
+    // STAYING NEAR
+    MOVE_LINGER, // random direction in a vicinity
+    MOVE_ORBIT, // orbit in a vicinity
+    MOVE_HIT_AND_RUN, // speed past the object (distance is set)
+};
+
+enum class e_rotationType {
+    NONE = 0,
+    SMOOTH = 1,
+    SNAP_GRID, // may change this to SNAP_VALUE for more flexibility, equiv to SNAP_8
 };
 
 const float PI = 3.14159;
+
+// For starters, player will have like 2 minute truce before enemies start coming,
+// maybe each discovered spawner is stronger and has a strength cap,
+// growing for a couple of minutes before reaching said cap? Then closing after an hour?
+
+// GameObject are unversal, not only for 'real' objects, but can be used for things like markings as well.
+// You could set up a system where the enemy moves to a certain spot, using game objects, while shooting a player,
+// since every part on an Enemy that's moving, is a separate, mounted game object.
 
 class Environment {
 public:
@@ -44,8 +64,8 @@ public:
     std::list<std::shared_ptr<GameObject>> data_staticObjects;
     // add chunks later as well
 
-    void addActiveObject(GameObject *ptr_newGameObject) {
-        data_activeObjects.push_back(std::shared_ptr<GameObject>(ptr_newGameObject));
+    void addActiveObject(const std::shared_ptr<GameObject>& ptr_newGameObject) {
+        data_activeObjects.push_back(ptr_newGameObject);
     }
     void remActiveObject() {
 
@@ -82,14 +102,17 @@ public:
     float movSpeed = 0;
     float rotSpeed = 1; // in degrees, DONT USE RADS
 
-    float rotation = 0; // deg, still less conversion will have to be done than when using rad up-front
     sf::Vector2f position {0,0};
+    float rotation = 0; // deg, still less conversion will have to be done than when using rad up-front
+    e_rotationType rotatingMode = e_rotationType::NONE;
 
-    std::shared_ptr<GameObject> targetObject;
+    std::weak_ptr<GameObject> primaryTarget;
+    std::weak_ptr<GameObject> currentTarget; // if the path to the target is obstructed, this is first priority target
+
     e_targetingType targetingMode = e_targetingType::NONE;
 
     void setTarget(std::shared_ptr<GameObject> &target, e_targetingType mode = e_targetingType::SIMPLE) {
-        targetObject = target;
+        primaryTarget = target;
         targetingMode = mode;
     }
 
@@ -155,7 +178,23 @@ public:
         parentObject = parent;
     }
 
+    void deleteSelf() {
+
+    }
+
     void update(Environment &ctx);
+    // starting with _ are routine, internal commands
+    // those functions will have to be executed multiple times to complete a certain task.
+    void _rotateToTarget(Environment &ctx) {
+
+    }
+    void _approachTarget(Environment &ctx) {
+
+    }
+
+    static int _getNewTarget() {
+        return 0;
+    }
 
     // static basic object init
     explicit GameObject(const std::string& texturePath) {
@@ -167,33 +206,40 @@ public:
 };
 
 void GameObject::update(Environment &ctx) {
+
+    if (primaryTarget.expired()) {
+        if(!_getNewTarget()) {
+            deleteSelf();
+        }
+    }
+
+    _rotateToTarget(ctx);
+    _approachTarget(ctx);
+
+    // refactor to navmesh navigation
     float mov = movSpeed * ctx.getFrameAdjustment();
 
-    float xMov = 0;
-    float yMov = 0;
+    // rewrite, don't recalculate anything, use the already existing difference
 
-    float x_dist = std::abs(targetObject->position.x) - std::abs(position.x);
-    float y_dist = std::abs(targetObject->position.y) - std::abs(position.y);
+    float xMov = primaryTarget.lock()->position.x - position.x;
+    float yMov = primaryTarget.lock()->position.y - position.y;
 
-    if (x_dist > movSpeed /* minimum distance */) {
-        if (position.x > targetObject->position.x)
-            xMov -= mov;
-        else
-            xMov += mov;
-    }
-
-    if (y_dist > movSpeed /* minimum distance */) {
-        if (position.y > targetObject->position.y)
-            yMov -= mov;
-        else
-            yMov += mov;
-    }
+    float xAb = std::abs(xMov);
+    float yAb = std::abs(yMov);
 
     if (xMov != 0 && yMov != 0) {
-        // 707 = sin 45deg = cos 45deg
-        xMov *= .707;
-        yMov *= .707;
+        xMov /= xAb + yAb; // 100 / 151 = 0.66
+        yMov /= xAb + yAb; // -51 / 151 = -0.33
+    } else {
+        if (yMov != 0)
+            yMov /= xAb + yAb;
+        if (xMov != 0)
+            xMov /= xAb + yAb;
     }
+
+
+    xMov *= mov;
+    yMov *= mov;
 
     position.x += xMov;
     position.y += yMov;
@@ -252,7 +298,7 @@ int main() {
                     break;
 
                 case sf::Event::LostFocus:
-                    // PAUSE IF POSSIBLE
+                    goto jmp_draw;
                     break;
                 case sf::Event::JoystickButtonPressed:
                 case sf::Event::JoystickButtonReleased:
@@ -288,6 +334,9 @@ int main() {
             ptr_newEnemy->setTarget(player);
             ptr_newEnemy->movSpeed = 0.7;
 
+            auto ptr_newTurret = std::make_shared<GameObject>("enemy.bmp");
+
+            env.addActiveObject(ptr_newEnemy);
         }
 
         // --
@@ -297,6 +346,9 @@ int main() {
             ref.centerView(window);
 
         // --
+        jmp_draw:
+
+        // menu logic and rest of drawing should end up here
 
         ref.draw(window);
 
@@ -304,11 +356,15 @@ int main() {
 
         for (auto &each_object : env.data_activeObjects) {
             each_object->draw(window);
+        }
 
+        for (auto &each_object : env.data_staticObjects) {
+            each_object->draw(window);
         }
 
         window.setView(window.getDefaultView());
         window.display();
         window.clear(sf::Color::White);
+
     }
 }
