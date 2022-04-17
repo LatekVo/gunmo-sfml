@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
 
 find_package(SFML REQUIRED COMPONENTS graphics system window)
-include_directories(${SFML_INCLUDE_DIR})
+include_directories(${SFML_INCLUDE_DIR} rsc)
 
 add_executable(gunmo
         main.cpp)

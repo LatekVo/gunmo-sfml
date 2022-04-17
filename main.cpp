@@ -6,10 +6,13 @@
 #include <list>
 #include <iostream>
 #include <memory>
+#include <valarray>
 
 class Environment; // environment will actually also control all the watch-dogged data and objects that need to be constantly updated
+class GamePreset;
 class GameObject;
 
+// movement and rotation, may be replaced with unit vectors to target
 enum class e_targetingType {
     NONE = 0,
     // HEAD ON
@@ -67,10 +70,12 @@ public:
     void addActiveObject(const std::shared_ptr<GameObject>& ptr_newGameObject) {
         data_activeObjects.push_back(ptr_newGameObject);
     }
-    void remActiveObject() {
+    void removeActiveObject() {
 
     }
     void updateGameState(Environment &ctx); // passing self, this is dumb, there has to be a better way
+
+    std::map<std::string, GamePreset> data_GamePresets; // holds copyable objects,
 
     void newFrameAdjustment() {
         // new frame's delta time counter
@@ -86,19 +91,47 @@ public:
 
 };
 
-class GameObject {
-// possibly parenting class, thus everything public
+class GamePreset {
 public:
+
+    std::string texturePath;
+
+    float movSpeed = 0;
+    float rotSpeed = 1;
+
+    sf::Vector2f position {0,0};
+    float rotation = 0;
+    e_rotationType rotatingMode = e_rotationType::NONE;
+
+    float detectionRange = 0.;
+    float focusRange = 0.;
+    float attackRange = 0.;
+
+    std::vector<GamePreset> childObjects;
+
+    std::shared_ptr<GameObject> generate(Environment &env);
+
+    bool load(std::string filePath) {
+
+        return 0;
+    }
+};
+
+class GameObject {
+private:
     //bin file will be in the bin/ directory anyway, so I can use this format for everything without changing the cmake file
     sf::Texture texture;
     sf::Sprite sprite;
 
-    sf::View objectView;
-
     // linking, for example a turret mounted on a vehicle
-    std::shared_ptr<GameObject> parentObject;
+    // a child list could be a better solution, though it could have some problems with drawing
+    std::weak_ptr<GameObject> parentObject;
+    bool isChild = false; // mainly for checking whether the parent is dead, or was there in the first place
 
-    // currently defaults to "rotating, not moving"
+public:
+    sf::View objectView; // will be used for panning, following
+
+    // currently, defaults to "rotating, not moving", should not be a problem if no target is set
     float movSpeed = 0;
     float rotSpeed = 1; // in degrees, DONT USE RADS
 
@@ -106,14 +139,24 @@ public:
     float rotation = 0; // deg, still less conversion will have to be done than when using rad up-front
     e_rotationType rotatingMode = e_rotationType::NONE;
 
+    float detectionRange = 0.; // gets aggro
+    float focusRange = 0.; // hunts down
+    float attackRange = 0.; // maximum hit range
+    float hitBox = 0.; //
+
     std::weak_ptr<GameObject> primaryTarget;
-    std::weak_ptr<GameObject> currentTarget; // if the path to the target is obstructed, this is first priority target
+    std::weak_ptr<GameObject> currentTarget; // internal actual target, eg: things in the way of target
 
     e_targetingType targetingMode = e_targetingType::NONE;
 
     void setTarget(std::shared_ptr<GameObject> &target, e_targetingType mode = e_targetingType::SIMPLE) {
         primaryTarget = target;
         targetingMode = mode;
+    }
+
+    void setParent(std::shared_ptr<GameObject> &arg_newParent) {
+        parentObject = arg_newParent; // shared to weak conversion, check later whether this alone works
+        isChild = true;
     }
 
     void setTexture(const std::string& texturePath) {
@@ -178,8 +221,8 @@ public:
         parentObject = parent;
     }
 
-    void deleteSelf() {
-
+    void remove(Environment &ctx, bool animation = true) {
+        // ctx . data{} . remove()
     }
 
     void update(Environment &ctx);
@@ -190,9 +233,62 @@ public:
     }
     void _approachTarget(Environment &ctx) {
 
+        auto lockedTarget = primaryTarget.lock();
+
+        // this is temporary, change to switch statement as there are more options
+
+        if (targetingMode == e_targetingType::LEADING_LINEAR) {
+            // generate two circles, each representing the velocity, draw a line from one intersection of circles to the other
+            // that line's intersection with the target's direction vector should be the hitting point, if the point is behind the target, the bullet is too slow
+            // not sure if this will work, though it works on paper
+
+        } else {
+            // targetingMode == e_targetingType::SIMPLE
+
+            // TODO: refactor to navmesh navigation
+            float mov = movSpeed * ctx.getFrameAdjustment();
+
+            // rewrite, don't recalculate anything, use the already existing difference
+            float xMov = lockedTarget->position.x - position.x;
+            float yMov = lockedTarget->position.y - position.y;
+
+            // distance check, elaborate this into aggro, search and wondering system
+            if (xMov < focusRange && xMov > -focusRange && yMov < focusRange && yMov > -focusRange) {
+                float xAb = std::abs(xMov);
+                float yAb = std::abs(yMov);
+                float zAb = xAb + yAb;
+
+                if (xMov != 0)
+                    xMov /= zAb;
+                if (yMov != 0)
+                    yMov /= zAb;
+
+                xMov *= mov;
+                yMov *= mov;
+
+                position.x += xMov;
+                position.y += yMov;
+            }
+        }
+
     }
 
-    static int _getNewTarget() {
+    // a full routine of approaching and attacking if possible
+    void _attackTarget(Environment &ctx) {
+
+        auto lockedTarget = primaryTarget.lock();
+
+        float xDist = lockedTarget->position.x - position.x;
+        float yDist = lockedTarget->position.y - position.y;
+
+        if (xDist < attackRange && xDist > -attackRange && yDist < attackRange && yDist > -attackRange) {
+            auto ptr_newBullet = std::make_shared<GameObject>("enemy.bmp");
+            ptr_newBullet->setTarget(lockedTarget);
+            ptr_newBullet->movSpeed = 0.7;
+        }
+    }
+
+    static int _getNewTarget(Environment &ctx) {
         return 0;
     }
 
@@ -205,42 +301,31 @@ public:
     }
 };
 
-void GameObject::update(Environment &ctx) {
+std::shared_ptr<GameObject> GamePreset::generate(Environment &env) {
+    auto newObject = std::make_shared<GameObject>(texturePath);
+
+    for(auto &eachChild : childObjects) {
+        auto childObject = eachChild.generate(env);
+        childObject->setParent(newObject);
+
+    }
+
+    return newObject;
+}
+
+void GameObject::update(Environment &env) {
 
     if (primaryTarget.expired()) {
         // no target, try to acquire new one
-        if(!_getNewTarget()) {
+        if(!_getNewTarget(env)) {
             // no targets, can't acquire new target
-            deleteSelf();
+            remove(env);
         }
     }
 
-    _rotateToTarget(ctx);
-    _approachTarget(ctx);
-
-    // refactor to navmesh navigation
-    float mov = movSpeed * ctx.getFrameAdjustment();
-
-    // rewrite, don't recalculate anything, use the already existing difference
-
-    float xMov = primaryTarget.lock()->position.x - position.x;
-    float yMov = primaryTarget.lock()->position.y - position.y;
-
-    float xAb = std::abs(xMov);
-    float yAb = std::abs(yMov);
-    float zAb = xAb + yAb;
-
-    if (xMov != 0)
-        xMov /= zAb;
-    if (yMov != 0)
-        yMov /= zAb;
-
-    xMov *= mov;
-    yMov *= mov;
-
-    position.x += xMov;
-    position.y += yMov;
-    sprite.setPosition(position);
+    if(rotSpeed > 0.) _rotateToTarget(env);
+    if(movSpeed > 0.) _approachTarget(env);
+    if(attackRange > 0.) _attackTarget(env);
 }
 
 void Environment::updateGameState(Environment &ctx) {
@@ -255,6 +340,7 @@ void Environment::updateGameState(Environment &ctx) {
 }
 
 int main() {
+
     sf::RenderWindow window(sf::VideoMode(), "gunmo", sf::Style::Fullscreen);
     window.setFramerateLimit(144);
 
@@ -271,6 +357,11 @@ int main() {
     ref.initView(window);
 
     Environment env;
+
+    // preloading setup
+    GamePreset preset_enemyPlaceholder;
+
+    env.data_GamePresets["enemy_placeholder"] = preset_enemyPlaceholder;
 
     sf::Clock enemyClock;
     int enemyDelay = 1000;
@@ -330,8 +421,10 @@ int main() {
             auto ptr_newEnemy = std::make_shared<GameObject>("enemy.bmp");
             ptr_newEnemy->setTarget(player);
             ptr_newEnemy->movSpeed = 0.7;
+            ptr_newEnemy->focusRange = 1000.;
 
             auto ptr_newTurret = std::make_shared<GameObject>("enemy.bmp");
+            ptr_newTurret->setParent(ptr_newEnemy);
 
             env.addActiveObject(ptr_newEnemy);
         }
