@@ -3,14 +3,45 @@
 #include <SFML/System.hpp>
 #include <SFML/Config.hpp>
 
+#include "PerlinNoise.h"
+
+#include <array>
 #include <list>
 #include <iostream>
 #include <memory>
 #include <valarray>
+#include <stdexcept>
 
 class Environment; // environment will actually also control all the watch-dogged data and objects that need to be constantly updated
 class GamePreset;
 class GameObject;
+
+template <int L>
+class LayeredPerlin {
+    unsigned int l_seed = 0;
+public:
+    PerlinNoise noise;
+
+    // no need for scaling value, 1/x works fine 90% of the time, 1/2^x is unnecesarly complex,
+    // and anything larger than 1/2 will result in spiky and usually unneeded noisemaps
+
+    explicit LayeredPerlin(unsigned int seed) : l_seed(seed) {
+
+        if (L < 1) throw std::invalid_argument("LayeredPerlin: template argument 'L' - number of layers must be positive");
+        noise.setSeed(l_seed);
+
+    }
+
+    float getNoise(float x, float y) {
+        float o = 0;
+
+        for (float i = 1; i <= L; i += 1.f) { // NOLINT(cert-flp30-c)
+            o += noise.noise(x / i, y / i, i) / i;
+        }
+
+        return o;
+    }
+};
 
 // movement and rotation, may be replaced with unit vectors to target
 enum class e_targetingType {
@@ -38,11 +69,49 @@ const float PI = 3.14159;
 // maybe each discovered spawner is stronger and has a strength cap,
 // growing for a couple of minutes before reaching said cap? Then closing after an hour?
 
-// GameObject are unversal, not only for 'real' objects, but can be used for things like markings as well.
+// GameObject are universal, not only for 'real' objects, but can be used for things like markings as well.
 // You could set up a system where the enemy moves to a certain spot, using game objects, while shooting a player,
 // since every part on an Enemy that's moving, is a separate, mounted game object.
 
+
+// tile is a smallest building unit, and the smallest biome detail unit, 1 tile has 1 randomly placed biome vertex
+// portions of tile are re-generated every time it is loaded, the ones that cannot be altered by user
+
+enum class e_biome {
+    FOREST,
+    PLAINS,
+    SAVANNA,
+    DESERT,
+
+    COUNT,
+    TBD,
+};
+
+struct Tile {
+    float biomeVertex[2] = {0.f, 0.f};
+    unsigned int sameBiomeFaces = 0; // utility value, not neccesary
+    e_biome biomeName = e_biome::TBD;
+
+};
+
+// chunk is a screen sized lump of Tiles, not necessary just makes Tiles easier to manage and load, and increases float precision (or it will at some point)
+class Chunk {
+    std::array<std::array<Tile, 16>, 16> TileMap;
+    
+};
+
+// considering also adding LocalMap, it will have too many differences to somehow incorporate them both into one
+class GlobalMap {
+
+};
+
+// while now i try to avoid lookaheads for chunk generation, they will later be neccesary if i want anything besides the basic on-a-scale biomes
+
 class Environment {
+private:
+
+    LayeredPerlin<2> chunkPerlin;
+
 public:
     // game info & properties
     float g_timeScale = 1.f;
@@ -50,7 +119,11 @@ public:
     float g_currentFrameAdjustment = 0;
 
     // settings
+    unsigned int s_mapSeed = 0xDEADBEEF;
     float s_mouseWheelSensitivity = 0.1f;
+    // list of possible fields for chunk creation
+    // layer_type < layer's name, element_type <element's name, >>
+    std::vector<std::pair<std::string, std::vector<std::pair<std::string, unsigned int>>>> s_chunkTraitList;
 
     // must-store, context-dependant variables
     float v_mouseWheelTicks = 0;
@@ -89,6 +162,10 @@ public:
         return g_timeScale * g_currentFrameAdjustment * 1000;
     }
 
+    void generateChunks(unsigned int seed) {
+        chunkPerlin(seed);
+    }
+
 };
 
 class GamePreset {
@@ -111,12 +188,13 @@ public:
 
     std::shared_ptr<GameObject> generate(Environment &env);
 
-    bool load(std::string filePath) {
+    static bool load(const std::string &filePath) {
 
         return 0;
     }
 };
 
+// use anonymous function objects for special behaviour, like exploding after set amount of time or something
 class GameObject {
 private:
     //bin file will be in the bin/ directory anyway, so I can use this format for everything without changing the cmake file
@@ -282,7 +360,7 @@ public:
         float yDist = lockedTarget->position.y - position.y;
 
         if (xDist < attackRange && xDist > -attackRange && yDist < attackRange && yDist > -attackRange) {
-            auto ptr_newBullet = std::make_shared<GameObject>("enemy.bmp");
+            auto ptr_newBullet = std::make_shared<GameObject>();
             ptr_newBullet->setTarget(lockedTarget);
             ptr_newBullet->movSpeed = 0.7;
         }
@@ -451,6 +529,16 @@ int main() {
         for (auto &each_object : env.data_staticObjects) {
             each_object->draw(window);
         }
+
+
+        // DEBUG OVERLAY
+        /*
+        sf::Text text;
+        text.setString("Hello world");
+        text.setCharacterSize(24); // in pixels, not points!
+        text.setFillColor(sf::Color::Green);
+        window.draw(text);
+        */
 
         window.setView(window.getDefaultView());
         window.display();
