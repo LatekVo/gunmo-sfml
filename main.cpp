@@ -16,18 +16,18 @@ class Environment; // environment will actually also control all the watch-dogge
 class GamePreset;
 class GameObject;
 
-template <int L>
 class LayeredPerlin {
     unsigned int l_seed = 0;
+    unsigned int l_count = 1;
 public:
     PerlinNoise noise;
 
     // no need for scaling value, 1/x works fine 90% of the time, 1/2^x is unnecesarly complex,
     // and anything larger than 1/2 will result in spiky and usually unneeded noisemaps
 
-    explicit LayeredPerlin(unsigned int seed) : l_seed(seed) {
+    LayeredPerlin(int layers = 1, unsigned int seed = 0) : l_seed(seed), l_count(layers) {
 
-        if (L < 1) throw std::invalid_argument("LayeredPerlin: template argument 'L' - number of layers must be positive");
+        if (layers < 1) throw std::invalid_argument("LayeredPerlin: template argument 'L' - number of layers must be positive");
         noise.setSeed(l_seed);
 
     }
@@ -35,8 +35,8 @@ public:
     float getNoise(float x, float y) {
         float o = 0;
 
-        for (float i = 1; i <= L; i += 1.f) { // NOLINT(cert-flp30-c)
-            o += noise.noise(x / i, y / i, i) / i;
+        for (float i = 1; i <= l_count; i += 1.f) { // NOLINT(cert-flp30-c,cppcoreguidelines-narrowing-conversions)
+            o += (float)noise.noise(x / i, y / i, i) / i;
         }
 
         return o;
@@ -77,6 +77,11 @@ const float PI = 3.14159;
 // tile is a smallest building unit, and the smallest biome detail unit, 1 tile has 1 randomly placed biome vertex
 // portions of tile are re-generated every time it is loaded, the ones that cannot be altered by user
 
+// For the dynamic chunk loading to work, all of the objects will have to be stored in the chunk data somehow.
+// When objects turn active, they are stored in the active register, independently of chunks.
+// When they turn dossile (have no job) they turn to the chunk storage.
+// Active objects are always globally loaded, and always force a chunk they are in to load as well.
+
 enum class e_biome {
     FOREST,
     PLAINS,
@@ -96,22 +101,26 @@ struct Tile {
 
 // chunk is a screen sized lump of Tiles, not necessary just makes Tiles easier to manage and load, and increases float precision (or it will at some point)
 class Chunk {
+    // using data_x because this list is an analogue to an Env object named the same way
+    std::list<GameObject> data_passiveObjects;
     std::array<std::array<Tile, 16>, 16> TileMap;
-    
+    bool isActive = false;
+    bool isModified = false;
+
+    // these functions may be moved in future to the GameObject class
+    void swapObjectToActive() {
+
+    };
+    void swapObjectToPassive() {
+
+    }
 };
 
-// considering also adding LocalMap, it will have too many differences to somehow incorporate them both into one
-class GlobalMap {
+// loading, generating, storing chunks
+class ChunkManager;
 
-};
-
-// while now i try to avoid lookaheads for chunk generation, they will later be neccesary if i want anything besides the basic on-a-scale biomes
-
+// save file specific detail. some variables not affiliated to save file.
 class Environment {
-private:
-
-    LayeredPerlin<2> chunkPerlin;
-
 public:
     // game info & properties
     float g_timeScale = 1.f;
@@ -119,11 +128,9 @@ public:
     float g_currentFrameAdjustment = 0;
 
     // settings
+    std::string s_saveFilename = "newSaveFile";
     unsigned int s_mapSeed = 0xDEADBEEF;
     float s_mouseWheelSensitivity = 0.1f;
-    // list of possible fields for chunk creation
-    // layer_type < layer's name, element_type <element's name, >>
-    std::vector<std::pair<std::string, std::vector<std::pair<std::string, unsigned int>>>> s_chunkTraitList;
 
     // must-store, context-dependant variables
     float v_mouseWheelTicks = 0;
@@ -143,9 +150,10 @@ public:
     void addActiveObject(const std::shared_ptr<GameObject>& ptr_newGameObject) {
         data_activeObjects.push_back(ptr_newGameObject);
     }
-    void removeActiveObject() {
-
+    void removeActiveObject(const std::shared_ptr<GameObject>& ptr_newGameObject) {
+        data_activeObjects.remove(ptr_newGameObject);
     }
+
     void updateGameState(Environment &ctx); // passing self, this is dumb, there has to be a better way
 
     std::map<std::string, GamePreset> data_GamePresets; // holds copyable objects,
@@ -160,10 +168,6 @@ public:
     }
     float getFrameAdjustment() const {
         return g_timeScale * g_currentFrameAdjustment * 1000;
-    }
-
-    void generateChunks(unsigned int seed) {
-        chunkPerlin(seed);
     }
 
 };
@@ -352,7 +356,7 @@ public:
     }
 
     // a full routine of approaching and attacking if possible
-    void _attackTarget(Environment &ctx) {
+    void _attackTarget(Environment &ctx) const {
 
         auto lockedTarget = primaryTarget.lock();
 
@@ -379,6 +383,19 @@ public:
     }
 };
 
+class ChunkManager {
+    LayeredPerlin chunkPerlin;
+
+    explicit ChunkManager(Environment &ctx) {
+        chunkPerlin = LayeredPerlin(2, ctx.s_mapSeed);
+    }
+    // looking for chunk to load sequence: activeChunkBuffer -> chunkBuffer -> savedOnFile -> generateNew
+    void update() {
+
+    }
+};
+
+
 std::shared_ptr<GameObject> GamePreset::generate(Environment &env) {
     auto newObject = std::make_shared<GameObject>(texturePath);
 
@@ -391,19 +408,19 @@ std::shared_ptr<GameObject> GamePreset::generate(Environment &env) {
     return newObject;
 }
 
-void GameObject::update(Environment &env) {
+void GameObject::update(Environment &ctx) {
 
     if (primaryTarget.expired()) {
         // no target, try to acquire new one
-        if(!_getNewTarget(env)) {
+        if(!_getNewTarget(ctx)) {
             // no targets, can't acquire new target
-            remove(env);
+            // remove(ctx);
         }
     }
 
-    if(rotSpeed > 0.) _rotateToTarget(env);
-    if(movSpeed > 0.) _approachTarget(env);
-    if(attackRange > 0.) _attackTarget(env);
+    if(rotSpeed > 0.) _rotateToTarget(ctx);
+    if(movSpeed > 0.) _approachTarget(ctx);
+    if(attackRange > 0.) _attackTarget(ctx);
 }
 
 void Environment::updateGameState(Environment &ctx) {
