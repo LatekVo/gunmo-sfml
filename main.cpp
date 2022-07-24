@@ -11,6 +11,7 @@
 #include <memory>
 #include <valarray>
 #include <stdexcept>
+#include <deque>
 
 class Environment; // environment will actually also control all the watch-dogged data and objects that need to be constantly updated
 class GamePreset;
@@ -25,7 +26,7 @@ public:
     // no need for scaling value, 1/x works fine 90% of the time, 1/2^x is unnecesarly complex,
     // and anything larger than 1/2 will result in spiky and usually unneeded noisemaps
 
-    LayeredPerlin(int layers = 1, unsigned int seed = 0) : l_seed(seed), l_count(layers) {
+    LayeredPerlin(unsigned int layers = 1, unsigned int seed = 0) : l_seed(seed), l_count(layers) {
 
         if (layers < 1) throw std::invalid_argument("LayeredPerlin: template argument 'L' - number of layers must be positive");
         noise.setSeed(l_seed);
@@ -40,6 +41,26 @@ public:
         }
 
         return o;
+    }
+
+    // noise is 3d, we can measure displacement's direction by subtracting noise at one level from noise at level above.
+    // if this will be incredibly inefficient, i'll have to modify the pn algo at core to return the very same information.
+    // NOTE: not mentioned anywhere, but the first value is a layered noise and the other one is not.
+    std::pair<bool, bool> getPolarization3d(float x, float y) {
+        float base2dNoise = 0;
+        float diff = 0;
+
+        // we only want to look at the biggest layer's displacemnt, including smaller layers will create tiny anomalies
+        base2dNoise = (float)noise.noise(x, y, 0);
+        diff = (float)noise.noise(x, y, 0.1f); // TODO: this value (0.1f) will be broken with big enough x and y, change do adaptive value
+
+        // from layer 2 proceed as usual
+        for (float i = 2; i <= l_count; i += 1.f) { // NOLINT(cert-flp30-c,cppcoreguidelines-narrowing-conversions)
+            base2dNoise += (float)noise.noise(x / i, y / i, i) / i;
+        }
+
+        // case 0 is practically impossible even when the math plays out because of float error
+        return {base2dNoise > 0, diff > base2dNoise};
     }
 };
 
@@ -58,23 +79,16 @@ enum class e_targetingType {
 };
 
 enum class e_rotationType {
-    NONE = 0,
-    SMOOTH = 1,
+    NONE = 0, // instant in case of rotation speed > 0
+    SMOOTH,
     SNAP_GRID, // may change this to SNAP_VALUE for more flexibility, equiv to SNAP_8
 };
 
 const float PI = 3.14159;
 
-// For starters, player will have like 2 minute truce before enemies start coming,
-// maybe each discovered spawner is stronger and has a strength cap,
-// growing for a couple of minutes before reaching said cap? Then closing after an hour?
+// GameObject is universal, not only for 'real' objects, but for things like markings or bullets as well.
 
-// GameObject are universal, not only for 'real' objects, but can be used for things like markings as well.
-// You could set up a system where the enemy moves to a certain spot, using game objects, while shooting a player,
-// since every part on an Enemy that's moving, is a separate, mounted game object.
-
-
-// tile is a smallest building unit, and the smallest biome detail unit, 1 tile has 1 randomly placed biome vertex
+// Tile is the smallest building unit, and the smallest biome detail unit, 1 tile has 1 randomly placed biome vertex
 // portions of tile are re-generated every time it is loaded, the ones that cannot be altered by user
 
 // For the dynamic chunk loading to work, all of the objects will have to be stored in the chunk data somehow.
@@ -93,27 +107,23 @@ enum class e_biome {
 };
 
 struct Tile {
-    float biomeVertex[2] = {0.f, 0.f};
+    float biomeVertex[2] = {0.5f, 0.5f};
     unsigned int sameBiomeFaces = 0; // utility value, not neccesary
     e_biome biomeName = e_biome::TBD;
-
 };
 
 // chunk is a screen sized lump of Tiles, not necessary just makes Tiles easier to manage and load, and increases float precision (or it will at some point)
 class Chunk {
-    // using data_x because this list is an analogue to an Env object named the same way
-    std::list<GameObject> data_passiveObjects;
-    std::array<std::array<Tile, 16>, 16> TileMap;
+public:
+    std::array<std::array<Tile, 16>, 16> tileMap;
+    // using data_x format for consistency with an Env object named the same way
+    std::list<std::shared_ptr<GameObject>> data_passiveObjects;
     bool isActive = false;
     bool isModified = false;
 
     // these functions may be moved in future to the GameObject class
-    void swapObjectToActive() {
-
-    };
-    void swapObjectToPassive() {
-
-    }
+    void swapObjectToActive(std::shared_ptr<GameObject> &obj, Environment &env);
+    void swapObjectToPassive(std::shared_ptr<GameObject> &obj, Environment &env);
 };
 
 // loading, generating, storing chunks
@@ -214,11 +224,15 @@ public:
     sf::View objectView; // will be used for panning, following
 
     // currently, defaults to "rotating, not moving", should not be a problem if no target is set
-    float movSpeed = 0;
-    float rotSpeed = 1; // in degrees, DONT USE RADS
+    float movSpeed_max = 0;
+    float movSpeed_accel = 0;
+    float rotSpeed_max = 1; // in degrees, DONT USE RADS
+    float rotSpeed_accel = 0;
 
     sf::Vector2f position {0,0};
+    sf::Vector2f position_d {0, 0};
     float rotation = 0; // deg, still less conversion will have to be done than when using rad up-front
+    float rotation_d = 0;
     e_rotationType rotatingMode = e_rotationType::NONE;
 
     float detectionRange = 0.; // gets aggro
@@ -257,7 +271,7 @@ public:
 
     void updatePlayerInput(Environment &ctx) {
 
-        float mov = movSpeed * ctx.getFrameAdjustment();
+        float mov = movSpeed_max * ctx.getFrameAdjustment();
         float xMov = 0;
         float yMov = 0;
 
@@ -328,7 +342,7 @@ public:
             // targetingMode == e_targetingType::SIMPLE
 
             // TODO: refactor to navmesh navigation
-            float mov = movSpeed * ctx.getFrameAdjustment();
+            float mov = movSpeed_max * ctx.getFrameAdjustment();
 
             // rewrite, don't recalculate anything, use the already existing difference
             float xMov = lockedTarget->position.x - position.x;
@@ -366,7 +380,7 @@ public:
         if (xDist < attackRange && xDist > -attackRange && yDist < attackRange && yDist > -attackRange) {
             auto ptr_newBullet = std::make_shared<GameObject>();
             ptr_newBullet->setTarget(lockedTarget);
-            ptr_newBullet->movSpeed = 0.7;
+            ptr_newBullet->movSpeed_max = 0.7;
         }
     }
 
@@ -383,13 +397,55 @@ public:
     }
 };
 
+void Chunk::swapObjectToActive(std::shared_ptr<GameObject> &obj, Environment &env) {
+    env.data_activeObjects.push_back(obj);
+    data_passiveObjects.remove(obj);
+}
+
+void Chunk::swapObjectToPassive(std::shared_ptr<GameObject> &obj, Environment &env) {
+    data_passiveObjects.push_back(obj);
+    env.data_activeObjects.remove(obj);
+}
+
 class ChunkManager {
+private:
     LayeredPerlin chunkPerlin;
 
+    // a simple 3x3 buffer and maybe some extensions to 5x5 realised inside the chunk logic
+    std::deque<std::deque<Chunk>> playerBuffer;
+
+    e_biome _perlinToBiome(float x, float y) {
+        auto polar = chunkPerlin.getPolarization3d(x, y);
+        return (e_biome)(polar.first + polar.second + polar.second);
+    }
+
+    Chunk _generate(int x, int y) {
+        Chunk newChunk;
+        int chunkSize = newChunk.tileMap.size();
+        float globalCoords[] {(float)(x * chunkSize), (float)(y * chunkSize)};
+
+        for (unsigned int x_i = 0; x_i < chunkSize; x_i++) {
+            for (unsigned int y_i = 0; y_i < chunkSize; y_i++) {
+                Tile newTile;
+
+                //newTile.biomeVertex = {}; // i need 2 persistent 0->1 values here
+
+                // noise for:   chunk position  +  tile offset  +  tile offset offset
+                newTile.biomeName = _perlinToBiome(globalCoords[0] + (float)x_i + newTile.biomeVertex[0], globalCoords[1] + (float)y_i + newTile.biomeVertex[1]);
+                newChunk.tileMap[x][y] = newTile;
+            }
+        }
+
+        return newChunk;
+    }
+    // looking for chunk to load sequence: activeChunkBuffer -> chunkBuffer -> savedOnFile -> generateNew
+    void _load() {
+
+    }
+public:
     explicit ChunkManager(Environment &ctx) {
         chunkPerlin = LayeredPerlin(2, ctx.s_mapSeed);
     }
-    // looking for chunk to load sequence: activeChunkBuffer -> chunkBuffer -> savedOnFile -> generateNew
     void update() {
 
     }
@@ -402,13 +458,16 @@ std::shared_ptr<GameObject> GamePreset::generate(Environment &env) {
     for(auto &eachChild : childObjects) {
         auto childObject = eachChild.generate(env);
         childObject->setParent(newObject);
-
     }
 
     return newObject;
 }
 
 void GameObject::update(Environment &ctx) {
+
+    // temporary past value's storage
+    rotation_d = rotation;
+    position_d = position;
 
     if (primaryTarget.expired()) {
         // no target, try to acquire new one
@@ -418,9 +477,18 @@ void GameObject::update(Environment &ctx) {
         }
     }
 
-    if(rotSpeed > 0.) _rotateToTarget(ctx);
-    if(movSpeed > 0.) _approachTarget(ctx);
+    //TODO: very important: before applying this logic, we need to make sure parent updates first
+    if(!parentObject.expired()) {
+        position += parentObject.lock()->position_d;
+        rotation += parentObject.lock()->rotation_d;
+    }
+
+    if(rotSpeed_max > 0.) _rotateToTarget(ctx);
+    if(movSpeed_max > 0.) _approachTarget(ctx);
     if(attackRange > 0.) _attackTarget(ctx);
+
+    rotation_d = rotation - rotation_d;
+    position_d = position - position_d;
 }
 
 void Environment::updateGameState(Environment &ctx) {
@@ -430,7 +498,6 @@ void Environment::updateGameState(Environment &ctx) {
     */
     for (auto &each_object : data_activeObjects) {
         each_object->update(ctx);
-
     }
 }
 
@@ -445,11 +512,11 @@ int main() {
 
     std::shared_ptr<GameObject> player = std::make_shared<GameObject>("player.bmp");
     player->initView(window);
-    player->movSpeed = 1;
+    player->movSpeed_max = 1;
 
     // a temporary reference point
-    GameObject ref("placeholder.bmp");
-    ref.initView(window);
+    GameObject centerReferenceBlock("placeholder.bmp");
+    centerReferenceBlock.initView(window);
 
     Environment env;
 
@@ -482,7 +549,6 @@ int main() {
 
                 case sf::Event::LostFocus:
                     goto jmp_draw;
-                    break;
                 case sf::Event::JoystickButtonPressed:
                 case sf::Event::JoystickButtonReleased:
                 case sf::Event::JoystickMoved:
@@ -515,27 +581,30 @@ int main() {
 
             auto ptr_newEnemy = std::make_shared<GameObject>("enemy.bmp");
             ptr_newEnemy->setTarget(player);
-            ptr_newEnemy->movSpeed = 0.7;
+            ptr_newEnemy->movSpeed_max = 0.7;
             ptr_newEnemy->focusRange = 1000.;
 
-            auto ptr_newTurret = std::make_shared<GameObject>("enemy.bmp");
+            auto ptr_newTurret = std::make_shared<GameObject>("turret.png");
+            ptr_newTurret->setTarget(player);
             ptr_newTurret->setParent(ptr_newEnemy);
+            ptr_newEnemy->rotSpeed_max = 0.7;
 
             env.addActiveObject(ptr_newEnemy);
+            env.addActiveObject(ptr_newTurret);
         }
 
         // --
 
         player->centerView(window);
         if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::G))
-            ref.centerView(window);
+            centerReferenceBlock.centerView(window);
 
         // --
         jmp_draw:
 
         // menu logic and rest of drawing should end up here
 
-        ref.draw(window);
+        centerReferenceBlock.draw(window);
 
         player->draw(window);
 
