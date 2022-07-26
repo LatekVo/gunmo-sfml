@@ -1,0 +1,1 @@
+While I still am developing this game, it's in a blank and unplayable condition, so i wouldn't recomment trying to run it for yourself. <br>
