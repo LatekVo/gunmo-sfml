@@ -1,3 +1,7 @@
+
+// THIS LIBRARY HAS BEEN WRITTEN BY sol-prog, HE CAN BE FOUND HERE: https://github.com/sol-prog/
+// THIS LIBRARY AND IT'S SOURCE CAN BE DOWNLOADED HERE: https://github.com/sol-prog/Perlin_Noise/blob/master/
+
 #include "PerlinNoise.h"
 #include <cmath>
 #include <random>

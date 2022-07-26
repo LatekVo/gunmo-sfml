@@ -1,3 +1,7 @@
+
+// THIS LIBRARY HAS BEEN WRITTEN BY sol-prog, HE CAN BE FOUND HERE: https://github.com/sol-prog/
+// THIS LIBRARY AND IT'S SOURCE CAN BE DOWNLOADED HERE: https://github.com/sol-prog/Perlin_Noise/blob/master/
+
 #include <vector>
 
 // THIS CLASS IS A TRANSLATION TO C++11 FROM THE REFERENCE
