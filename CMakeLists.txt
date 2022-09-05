@@ -10,7 +10,9 @@ include_directories(${SFML_INCLUDE_DIR} ${rsc})
 
 add_executable(gunmo
         main.cpp
-        PerlinNoise.cpp)
+        PerlinNoise.cpp
+        LayeredPerlin.cpp
+        EngineEssentials.cpp EngineEssentials.h)
 
 # add libs you need
 set(SFML_LIBRARIES sfml-system sfml-graphics sfml-window)
