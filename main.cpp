@@ -1,27 +1,17 @@
 #include <SFML/Window.hpp>
 #include <SFML/Graphics.hpp>
 #include <SFML/System.hpp>
-#include <SFML/Config.hpp>
+
+#include <iostream>
+#include <memory>
 
 #include "EngineEssentials.h"
 
-#include <array>
-#include <list>
-#include <iostream>
-#include <memory>
-#include <valarray>
-#include <stdexcept>
-#include <deque>
-#include <map>
-
 int main() {
 
+	// Base initialization
     sf::RenderWindow window(sf::VideoMode(), "gunmo", sf::Style::Fullscreen);
     window.setFramerateLimit(144);
-
-    // objects have their own view, game will try being cinematic
-    //sf::View mainView(sf::Vector2f(0., 0.), sf::Vector2f((float) window.getSize().x, (float) window.getSize().y));
-    //sf::View mainView = window.getDefaultView();
 
     std::shared_ptr<GameObject> player = std::make_shared<GameObject>("player.bmp");
     player->initView(window);
@@ -74,7 +64,8 @@ int main() {
                 case sf::Event::JoystickDisconnected:
                     std::cout << "HARDWARE: Joystick disconnected\n";
                     break;
-            }
+
+			}
         }
 
         // LOGIC, VIEW, DRAW
@@ -88,7 +79,9 @@ int main() {
         }
 
         env.updateGameState(env);
-        // spawn enemy
+
+        // debug: spawn enemy
+		/*
         if (enemyClock.getElapsedTime().asMilliseconds() > enemyDelay) {
             enemyClock.restart();
 
@@ -105,6 +98,7 @@ int main() {
             env.addActiveObject(ptr_newEnemy);
             env.addActiveObject(ptr_newTurret);
         }
+		*/
 
         // --
 

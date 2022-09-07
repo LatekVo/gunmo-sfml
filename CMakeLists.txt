@@ -12,7 +12,9 @@ add_executable(gunmo
         main.cpp
         PerlinNoise.cpp
         LayeredPerlin.cpp
-        EngineEssentials.cpp EngineEssentials.h)
+        EngineEssentials.cpp
+        Environment.cpp
+        ChunkManagement.cpp)
 
 # add libs you need
 set(SFML_LIBRARIES sfml-system sfml-graphics sfml-window)

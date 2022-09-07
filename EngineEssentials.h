@@ -17,6 +17,16 @@
 #include <memory>
 
 #include "LayeredPerlin.h"
+#include "Constants.h"
+
+// General spreadsheet of Class tasks:
+/*
+ * 	Environment: Runtime tasks, runtime object management, probing, logic, drawing.
+ * 	ChunkManager: Long-term storage, chunk generation, position storage. Moves all active objects into Environment's jurisdiction.
+ * 	GameObject: Basic building block of any intractable object. More customization will likely be achieved by implementing LUA or by dynamically loading (is that even manageable???) foreign functors.
+ *  GamePreset: A format used for storing GameObject presets. There are some limitations to storing GameObject in a binary format directly, and GamePreset helps to avoid them.
+ *  			Additionally it acts as a means of storage for already loaded GO presets, they can be then used to spawn multiple identical GOs
+ */
 
 class Environment; // environment will actually also control all the watch-dogged data and objects that need to be constantly updated
 class GamePreset;
@@ -24,28 +34,7 @@ class GameObject;
 
 
 // movement and rotation, may be replaced with unit vectors to target
-enum class e_targetingType {
-	NONE = 0, // no movement even in case of speed > 0
-	SIMPLE, // HEAD ON
 
-	// SHOOTING ALGO
-	LEADING_LINEAR, // leading, assuming straight-line movement
-	LEADING_QUADRATIC, // includes acceleration changes,
-
-	// STAYING NEAR
-	MOVE_LINGER, // random direction in a vicinity
-	MOVE_ORBIT, // orbit in a vicinity
-	MOVE_HIT_AND_RUN, // speed past the object (distance is set)
-};
-
-enum class e_rotationType {
-	NONE = 0, // no ratation even in case of speed > 0
-	SIMPLE, // instant in case of rotation speed > 0
-	SMOOTH,
-	SNAP_GRID, // may change this to SNAP_VALUE for more flexibility, equiv to SNAP_8
-};
-
-const float PI = 3.14159;
 
 // GameObject is universal, not only for 'real' objects, but for things like markings or bullets as well.
 
@@ -56,16 +45,6 @@ const float PI = 3.14159;
 // When objects turn active, they are stored in the active register, independently of chunks.
 // When they turn dossile (have no job) they turn to the chunk storage.
 // Active objects are always globally loaded, and always force a chunk they are in to load as well.
-
-enum class e_biome {
-	FOREST,
-	PLAINS,
-	SAVANNA,
-	DESERT,
-
-	COUNT,
-	TBD,
-};
 
 struct Tile {
 	float biomeVertex[2] = {0.5f, 0.5f};
