@@ -7,6 +7,16 @@
 
 #include "EngineEssentials.h"
 
+// CURRENT HIERARCHY PLANS
+/*
+ * 	Environment: Runtime tasks, runtime object management, probing, logic, drawing.
+ * 	ChunkManager: Long-term storage, chunk generation, position storage. Moves all active objects into Environment's jurisdiction.
+ * 	GameObject: Basic building block of any intractable object. More customization will likely be achieved by implementing LUA or by dynamically loading (is that even manageable???) foreign functors.
+ *  GamePreset: A format used for storing GameObject presets. There are some limitations to storing GameObject in a binary format directly, and GamePreset helps to avoid them.
+ *  			Additionally it acts as a means of storage for already loaded GO presets, they can be then used to spawn multiple identical GOs
+ *
+ */
+
 int main() {
 
 	// Base initialization
@@ -81,24 +91,7 @@ int main() {
         env.updateGameState(env);
 
         // debug: spawn enemy
-		/*
-        if (enemyClock.getElapsedTime().asMilliseconds() > enemyDelay) {
-            enemyClock.restart();
-
-            auto ptr_newEnemy = std::make_shared<GameObject>("enemy.bmp");
-            ptr_newEnemy->setTarget(player);
-            ptr_newEnemy->movSpeed_max = 0.7;
-            ptr_newEnemy->focusRange = 1000.;
-
-            auto ptr_newTurret = std::make_shared<GameObject>("turret.png");
-            ptr_newTurret->setTarget(player);
-            ptr_newTurret->setParent(ptr_newEnemy);
-            ptr_newEnemy->rotSpeed_max = 0.7;
-
-            env.addActiveObject(ptr_newEnemy);
-            env.addActiveObject(ptr_newTurret);
-        }
-		*/
+		// instead, create a spawner item prefab, that spawns/shoots the placeholder_enemy prefab (spawning is already supported i think)
 
         // --
 

@@ -7,12 +7,6 @@
 
 #include "EngineEssentials.h"
 
-GamePreset::GamePreset() = default;
-
-GamePreset::GamePreset(const std::string &filePath) {
-
-}
-
 void GameObject::setTarget(std::shared_ptr<GameObject> &target, e_targetingType mode) {
 	primaryTarget = target;
 	targetingMode = mode;
@@ -180,17 +174,6 @@ GameObject::GameObject(const std::string& texturePath) {
 }
 GameObject::GameObject() {
 	setTexture("placeholder.bmp");
-}
-
-std::shared_ptr<GameObject> GamePreset::generate(Environment &env) {
-	auto newObject = std::make_shared<GameObject>(texturePath);
-
-	for(auto &eachChild : childObjects) {
-		auto childObject = eachChild.generate(env);
-		childObject->setParent(newObject);
-	}
-
-	return newObject;
 }
 
 void GameObject::update(Environment &ctx) {

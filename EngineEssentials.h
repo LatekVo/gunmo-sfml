@@ -19,17 +19,7 @@
 #include "LayeredPerlin.h"
 #include "Constants.h"
 
-// General spreadsheet of Class tasks:
-/*
- * 	Environment: Runtime tasks, runtime object management, probing, logic, drawing.
- * 	ChunkManager: Long-term storage, chunk generation, position storage. Moves all active objects into Environment's jurisdiction.
- * 	GameObject: Basic building block of any intractable object. More customization will likely be achieved by implementing LUA or by dynamically loading (is that even manageable???) foreign functors.
- *  GamePreset: A format used for storing GameObject presets. There are some limitations to storing GameObject in a binary format directly, and GamePreset helps to avoid them.
- *  			Additionally it acts as a means of storage for already loaded GO presets, they can be then used to spawn multiple identical GOs
- */
-
 class Environment; // environment will actually also control all the watch-dogged data and objects that need to be constantly updated
-class GamePreset;
 class GameObject;
 
 
@@ -107,32 +97,6 @@ public:
 	void newFrameAdjustment();
 
 	float getFrameAdjustment() const;
-
-};
-
-class GamePreset {
-public:
-
-	std::string texturePath;
-
-	float movSpeed = 0;
-	float rotSpeed = 1;
-
-	sf::Vector2f position {0,0};
-	float rotation = 0;
-	e_rotationType rotatingMode = e_rotationType::NONE;
-
-	float detectionRange = 0.;
-	float focusRange = 0.;
-	float attackRange = 0.;
-
-	std::vector<GamePreset> childObjects;
-
-	std::shared_ptr<GameObject> generate(Environment &env);
-
-	GamePreset();
-
-	GamePreset(const std::string &filePath);
 
 };
 
