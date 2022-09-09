@@ -67,12 +67,14 @@ void ChunkManager::update() {
 
 }
 
+// todo: move this to LibDraw
 void ChunkManager::draw() {
 	// todo: these are a source of minor inefficiencies and should be declared only once per runtime.
 	unsigned int bufferSize = playerBuffer.size();
 	unsigned int tileMapSize = playerBuffer.front().front()->tileMap.size();
 
-	static std::array<, tileMapSize>
+	// N x N sized vector, created only one time per runtime, used to cache color info.
+	static std::vector<std::vector<Tile>> tileBuffer(tileMapSize * 3, std::vector<Tile>(tileMapSize * 3));
 
 	// do not change, for( : ) format is impossible or incredibly impractical here.
 	for (unsigned int chunk_y = 0; chunk_y < bufferSize; chunk_y++) {

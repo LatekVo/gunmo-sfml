@@ -17,6 +17,7 @@ void GameObject::setParent(std::shared_ptr<GameObject> &arg_newParent) {
 	isChild = true;
 }
 
+/*
 void GameObject::setTexture(const std::string& texturePath) {
 	if (texture.loadFromFile("rsc/" + texturePath) == 0) {
 		std::cout << "replacing texture with a placeholder" << std::endl;
@@ -24,13 +25,28 @@ void GameObject::setTexture(const std::string& texturePath) {
 	}
 	sprite.setTexture(texture);
 }
-/*
+
 void GameObject::draw(sf::RenderWindow& rx) {
 	sprite.setPosition(position);
 	sprite.setRotation(rotation);
 	rx.draw(sprite);
 }
 
+
+void GameObject::initView(sf::RenderWindow& rx) {
+	objectView.reset(sf::FloatRect(0, 0, (float) rx.getSize().x, (float) rx.getSize().y));
+}
+
+void GameObject::centerView(sf::RenderWindow& rx) {
+	objectView.setCenter(position);
+	objectView.move((float)sprite.getTextureRect().width / 2,
+					(float)sprite.getTextureRect().height / 2);
+	rx.setView(objectView);
+}
+*/
+// only sets the object for targeting, may be used internally, functionality expanded in the main update function
+
+// todo: move this function to environment, as such: GO.playerInput(env) -> env.inputFromPlayer(GO)
 void GameObject::updatePlayerInput(Environment &ctx) {
 
 	float mov = movSpeed_max * ctx.getFrameAdjustment();
@@ -54,21 +70,7 @@ void GameObject::updatePlayerInput(Environment &ctx) {
 
 	position.x += xMov;
 	position.y += yMov;
-	sprite.setPosition(position);
 }
-
-void GameObject::initView(sf::RenderWindow& rx) {
-	objectView.reset(sf::FloatRect(0, 0, (float) rx.getSize().x, (float) rx.getSize().y));
-}
-
-void GameObject::centerView(sf::RenderWindow& rx) {
-	objectView.setCenter(position);
-	objectView.move((float)sprite.getTextureRect().width / 2,
-					(float)sprite.getTextureRect().height / 2);
-	rx.setView(objectView);
-}
-*/
-// only sets the object for targeting, may be used internally, functionality expanded in the main update function
 
 void GameObject::linkObject(std::shared_ptr<GameObject> &parent) {
 	parentObject.reset();
@@ -166,14 +168,6 @@ void GameObject::_attackTarget(Environment &ctx) const {
 
 int GameObject::_getNewTarget(Environment &ctx) {
 	return 0;
-}
-
-// static basic object init
-GameObject::GameObject(const std::string& texturePath) {
-	setTexture(texturePath);
-}
-GameObject::GameObject() {
-	setTexture("placeholder.bmp");
 }
 
 void GameObject::update(Environment &ctx) {

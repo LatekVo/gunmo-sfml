@@ -148,15 +148,20 @@ public:
 
 	void setParent(std::shared_ptr<GameObject> &arg_newParent);
 
+	/*
+
 	void setTexture(const std::string& texturePath);
 
 	void draw(sf::RenderWindow& rx);
 
-	void updatePlayerInput(Environment &ctx);
-
 	void initView(sf::RenderWindow& rx);
 
 	void centerView(sf::RenderWindow& rx);
+
+	*/
+
+	void updatePlayerInput(Environment &ctx);
+
 
 	// only sets the object for targeting, may be used internally, functionality expanded in the main update function
 
@@ -178,10 +183,7 @@ public:
 
 	static int _getNewTarget(Environment &ctx);
 
-	// static basic object init
-	explicit GameObject(const std::string& texturePath);
-
-	GameObject();
+	GameObject() = default;
 };
 
 class ChunkManager {

@@ -21,7 +21,7 @@ int main() {
     auto window = std::make_shared<sf::RenderWindow>(sf::VideoMode(), "t", sf::Style::Fullscreen);
     window->setFramerateLimit(144);
 
-    std::shared_ptr<GameObject> player = std::make_shared<GameObject>("player.bmp");
+    std::shared_ptr<GameObject> player = std::make_shared<GameObject>();
     player->movSpeed_max = 1;
 
     auto env = std::make_shared<Environment>();
