@@ -14,7 +14,8 @@ add_executable(gunmo
         LayeredPerlin.cpp
         EngineEssentials.cpp
         Environment.cpp
-        ChunkManagement.cpp)
+        ChunkManagement.cpp
+        LibDraw.cpp)
 
 # add libs you need
 set(SFML_LIBRARIES sfml-system sfml-graphics sfml-window)

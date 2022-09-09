@@ -1,11 +1,8 @@
-#include <SFML/Window.hpp>
-#include <SFML/Graphics.hpp>
-#include <SFML/System.hpp>
-
 #include <iostream>
 #include <memory>
 
 #include "EngineEssentials.h"
+#include "LibDraw.h"
 
 // CURRENT HIERARCHY PLANS
 /*
@@ -13,51 +10,47 @@
  * 	ChunkManager: Long-term storage, chunk generation, position storage. Moves all active objects into Environment's jurisdiction.
  * 	GameObject: Basic building block of any intractable object. More customization will likely be achieved by implementing LUA or by dynamically loading (is that even manageable???) foreign functors.
  *  GamePreset: A format used for storing GameObject presets. There are some limitations to storing GameObject in a binary format directly, and GamePreset helps to avoid them.
- *  			Additionally it acts as a means of storage for already loaded GO presets, they can be then used to spawn multiple identical GOs
+ *  			Additionally, it acts as a means of storage for already loaded GO presets, they can be then used to spawn multiple identical GOs
  *
+ *  LibDraw: An independent class/lib, reads other classes but isn't read by any. It's an optional graphical interface.
  */
 
 int main() {
 
 	// Base initialization
-    sf::RenderWindow window(sf::VideoMode(), "gunmo", sf::Style::Fullscreen);
-    window.setFramerateLimit(144);
+    auto window = std::make_shared<sf::RenderWindow>(sf::VideoMode(), "t", sf::Style::Fullscreen);
+    window->setFramerateLimit(144);
 
     std::shared_ptr<GameObject> player = std::make_shared<GameObject>("player.bmp");
-    player->initView(window);
     player->movSpeed_max = 1;
 
-    // a temporary reference point
-    GameObject centerReferenceBlock("placeholder.bmp");
-    centerReferenceBlock.initView(window);
-
-    Environment env;
+    auto env = std::make_shared<Environment>();
 
     // preloading setup
-    GamePreset preset_enemyPlaceholder;
+    GameObject preset_enemyPlaceholder;
 
-    env.data_GamePresets["enemy_placeholder"] = preset_enemyPlaceholder;
+    env->data_GamePresets["enemy_placeholder"] = preset_enemyPlaceholder;
 
     sf::Clock enemyClock;
     int enemyDelay = 1000;
 
-    while(window.isOpen()) {
+    while(window->isOpen()) {
 
-        env.newFrameAdjustment();
+        env->newFrameAdjustment();
 
         sf::Event event {};
-        while(window.pollEvent(event)) {
+        while(window->pollEvent(event)) {
             switch (event.type) {
                 case sf::Event::Closed:
-                    window.close();
+                    window->close();
                     break;
                 case sf::Event::KeyPressed:
                     if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Escape)) {
-                        window.close();
+                        window->close();
                     }
                     break;
                 case sf::Event::MouseWheelScrolled:
-                        env.v_mouseWheelTicks = event.mouseWheelScroll.delta;
+                        env->v_mouseWheelTicks = event.mouseWheelScroll.delta;
                     break;
 
                 case sf::Event::LostFocus:
@@ -80,34 +73,22 @@ int main() {
 
         // LOGIC, VIEW, DRAW
 
-        player->updatePlayerInput(env);
-        if (env.v_mouseWheelTicks != 0) {
-            float zoomFactor = 1 - (env.v_mouseWheelTicks * env.s_mouseWheelSensitivity);
+		// todo: reverse this function, player(env) -> env(player)
+        player->updatePlayerInput(*env);
 
-            player->objectView.zoom(zoomFactor);
-
-        }
-
-        env.updateGameState(env);
+		// todo: this function shouldn't have to feed itself
+        env->updateGameState(*env);
 
         // debug: spawn enemy
 		// instead, create a spawner item prefab, that spawns/shoots the placeholder_enemy prefab (spawning is already supported i think)
 
         // --
 
-        player->centerView(window);
-        if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::G))
-            centerReferenceBlock.centerView(window);
-
-        // --
         jmp_draw:
 
         // menu logic and rest of drawing should end up here
 
-        centerReferenceBlock.draw(window);
-
-        player->draw(window);
-
+		/*
         for (auto &each_object : env.data_activeObjects) {
             each_object->draw(window);
         }
@@ -115,7 +96,7 @@ int main() {
         for (auto &each_object : env.data_staticObjects) {
             each_object->draw(window);
         }
-
+		*/
 
         // DEBUG OVERLAY
         /*
@@ -126,9 +107,9 @@ int main() {
         window.draw(text);
         */
 
-        window.setView(window.getDefaultView());
-        window.display();
-        window.clear(sf::Color::White);
+        window->setView(window->getDefaultView());
+        window->display();
+        window->clear(sf::Color::White);
 
     }
 }

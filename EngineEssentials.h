@@ -22,6 +22,17 @@
 class Environment; // environment will actually also control all the watch-dogged data and objects that need to be constantly updated
 class GameObject;
 
+// todo: to be moved to another class file
+namespace Math {
+	template<typename T>
+	class Vec {
+	public:
+		T x = 0;
+		T y = 0;
+
+
+	};
+}
 
 // movement and rotation, may be replaced with unit vectors to target
 
@@ -92,7 +103,7 @@ public:
 
 	void updateGameState(Environment &ctx); // passing self, this is dumb, there has to be a better way
 
-	std::map<std::string, GamePreset> data_GamePresets; // holds copyable objects,
+	std::map<std::string, GameObject> data_GamePresets; // holds copyable objects,
 
 	void newFrameAdjustment();
 
@@ -103,9 +114,6 @@ public:
 // use anonymous function objects for special behaviour, like exploding after set amount of time or something
 class GameObject {
 private:
-	//bin file will be in the bin/ directory anyway, so I can use this format for everything without changing the cmake file
-	sf::Texture texture;
-	sf::Sprite sprite;
 
 	// linking, for example a turret mounted on a vehicle
 	// a child list could be a better solution, though it could have some problems with drawing
@@ -113,7 +121,6 @@ private:
 	bool isChild = false; // mainly for checking whether the parent is dead, or was there in the first place
 
 public:
-	sf::View objectView; // will be used for panning, following
 
 	// currently, defaults to "rotating, not moving", should not be a problem if no target is set
 	float movSpeed_max = 0;

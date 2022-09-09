@@ -24,7 +24,7 @@ void GameObject::setTexture(const std::string& texturePath) {
 	}
 	sprite.setTexture(texture);
 }
-
+/*
 void GameObject::draw(sf::RenderWindow& rx) {
 	sprite.setPosition(position);
 	sprite.setRotation(rotation);
@@ -67,7 +67,7 @@ void GameObject::centerView(sf::RenderWindow& rx) {
 					(float)sprite.getTextureRect().height / 2);
 	rx.setView(objectView);
 }
-
+*/
 // only sets the object for targeting, may be used internally, functionality expanded in the main update function
 
 void GameObject::linkObject(std::shared_ptr<GameObject> &parent) {

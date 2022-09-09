@@ -4,14 +4,15 @@
 
 #include "EngineEssentials.h"
 
-
 void Chunk::swapObjectToActive(std::shared_ptr<GameObject> &obj, Environment &env) {
 	env.data_activeObjects.push_back(obj);
+	env.data_staticObjects.remove(obj);
 	data_passiveObjects.remove(obj);
 }
 
 void Chunk::swapObjectToPassive(std::shared_ptr<GameObject> &obj, Environment &env) {
 	data_passiveObjects.push_back(obj);
+	env.data_staticObjects.push_back(obj);
 	env.data_activeObjects.remove(obj);
 }
 
@@ -67,5 +68,40 @@ void ChunkManager::update() {
 }
 
 void ChunkManager::draw() {
+	// todo: these are a source of minor inefficiencies and should be declared only once per runtime.
+	unsigned int bufferSize = playerBuffer.size();
+	unsigned int tileMapSize = playerBuffer.front().front()->tileMap.size();
+
+	static std::array<, tileMapSize>
+
+	// do not change, for( : ) format is impossible or incredibly impractical here.
+	for (unsigned int chunk_y = 0; chunk_y < bufferSize; chunk_y++) {
+		for (unsigned int chunk_x = 0; chunk_x < bufferSize; chunk_x++) {
+			for (unsigned int tile_y = 0; tile_y < tileMapSize; tile_y++) {
+
+				// edge avoidance
+				if (chunk_y == 0 && tile_y == 0)
+					tile_y++;
+				if (chunk_y == 2 && tile_y == tileMapSize - 1)
+					break;
+
+				for (unsigned int tile_x = 0; tile_x < tileMapSize; tile_x++) {
+
+					if (chunk_x == 0 && tile_x == 0)
+						tile_y++;
+					if (chunk_x == 2 && tile_x == tileMapSize - 1)
+						break;
+
+					// todo: this is a bare-bones implementation, that is in no way optimised, this is quite an important optimization to make
+
+
+
+					// connect current vertex to the 4 neighbours
+
+				}
+			}
+
+		}
+	}
 
 }
