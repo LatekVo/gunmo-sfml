@@ -8,6 +8,7 @@
 #include <memory>
 
 #include "EngineEssentials.h"
+#include "ChunkManagement.h"
 
 class LibDraw {
 public:

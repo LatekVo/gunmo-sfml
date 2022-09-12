@@ -197,3 +197,7 @@ void GameObject::update(Environment &ctx) {
 	rotation_d = rotation - rotation_d;
 	position_d = position - position_d;
 }
+
+void GameObject::drawInfo::setTexture(const std::string &_texturePath) {
+	texturePath = _texturePath;
+}

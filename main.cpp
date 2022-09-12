@@ -2,7 +2,9 @@
 #include <memory>
 
 #include "EngineEssentials.h"
+#include "ChunkManagement.h"
 #include "LibDraw.h"
+
 
 // CURRENT HIERARCHY PLANS
 /*
@@ -13,6 +15,7 @@
  *  			Additionally, it acts as a means of storage for already loaded GO presets, they can be then used to spawn multiple identical GOs
  *
  *  LibDraw: An independent class/lib, reads other classes but isn't read by any. It's an optional graphical interface.
+ *
  */
 
 int main() {
@@ -25,8 +28,9 @@ int main() {
     player->movSpeed_max = 1;
 
     auto env = std::make_shared<Environment>();
+	auto chunkMan = std::make_shared<ChunkManager>(env);
 
-    // preloading setup
+	// preloading setup
     GameObject preset_enemyPlaceholder;
 
     env->data_GamePresets["enemy_placeholder"] = preset_enemyPlaceholder;

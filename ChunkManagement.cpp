@@ -2,7 +2,7 @@
 // Created by armado on 9/8/22.
 //
 
-#include "EngineEssentials.h"
+#include "ChunkManagement.h"
 
 void Chunk::swapObjectToActive(std::shared_ptr<GameObject> &obj, Environment &env) {
 	env.data_activeObjects.push_back(obj);
@@ -41,7 +41,7 @@ Chunk ChunkManager::_generate(int x, int y) {
 	return newChunk;
 }
 // looking for chunk to load sequence:  historyBuffer -> activeChunkBuffer -> savedOnFile -> generateNew
-std::shared_ptr<Chunk> ChunkManager::_getChunk(int x, int y, Environment &ctx) {
+std::shared_ptr<Chunk> ChunkManager::_getChunk(int x, int y) {
 
 	// check history buffer x and y
 	// double nested if - to ensure right order of operation
@@ -57,10 +57,6 @@ std::shared_ptr<Chunk> ChunkManager::_getChunk(int x, int y, Environment &ctx) {
 
 	return std::make_shared<Chunk>(_generate(x, y));
 
-}
-
-ChunkManager::ChunkManager(Environment &ctx) {
-	chunkPerlin = LayeredPerlin(2, ctx.s_mapSeed);
 }
 
 void ChunkManager::update() {
@@ -106,4 +102,9 @@ void ChunkManager::draw() {
 		}
 	}
 
+}
+
+ChunkManager::ChunkManager(std::shared_ptr<Environment> &_ctx) {
+	ctx = _ctx;
+	chunkPerlin = LayeredPerlin(2, ctx.lock()->s_mapSeed);
 }
