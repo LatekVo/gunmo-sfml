@@ -5,7 +5,6 @@
 #ifndef GUNMO_CONSTANTS_H
 #define GUNMO_CONSTANTS_H
 
-
 const float PI = 3.14159;
 
 // dictates logic attached to moving, should probably rather be controlled by anon functions and not some hardcoded switch statements
@@ -46,6 +45,67 @@ enum class e_biome {
 
 	COUNT,
 	TBD,
+};
+
+// every supported key. keys themselves don't matter,
+// only thing that matters is KEY - VALUE relation to remain unchanged between all versions of this library
+enum class e_key {
+	A,
+	B,
+	C,
+	D,
+	E,
+	F,
+	G,
+	H,
+	I,
+	J,
+	K,
+	L,
+	M,
+	N,
+	O,
+	P,
+	Q,
+	R,
+	S,
+	T,
+	U,
+	V,
+	W,
+	Y,
+	Z,
+
+	N_ONE,
+	N_TWO,
+	N_THREE,
+	N_FOUR,
+	N_FIVE,
+	N_SIX,
+	N_SEVEN,
+	N_EIGHT,
+	N_NINE,
+	N_ZERO,
+
+	Alt,
+	Alt_L,
+	Alt_R,
+
+	Shift,
+	Shift_L,
+	Shift_R,
+
+	S_Esc,
+	S_Brackets_L,
+	S_Brackets_R,
+	S_Curly_L,
+	S_Curly_R,
+	S_Slash,
+	S_BackSlash,
+	S_LessThan,
+	S_GreaterThan,
+	S_Dot,
+	S_Comma
 };
 
 #endif //GUNMO_CONSTANTS_H
