@@ -15,6 +15,8 @@
 #include <list>
 #include <deque>
 #include <memory>
+#include <map>
+#include <chrono>
 
 #include "LayeredPerlin.h"
 #include "Constants.h"
@@ -26,11 +28,43 @@ class GameObject;
 namespace Math {
 	template<typename T>
 	class Vec {
+
+		void _add(Vec<T> &val) {
+			x += val.x;
+			y += val.y;
+		}
+		void _sub(Vec<T> &val) {
+			x -= val.x;
+			y -= val.y;
+		}
+		void _mult(T val) {
+			x *= val;
+			y *= val;
+		}
+		void _div(T val) {
+			x /= val;
+			y /= val;
+		}
+
 	public:
 		T x = 0;
 		T y = 0;
 
+		void operator +=(Vec<T> &rhs) {
+			_add(rhs);
+		}
 
+		void operator -=(Vec<T> &rhs) {
+			_sub(rhs);
+		}
+
+		void operator *=(Vec<T> &rhs) {
+			_mult(rhs);
+		}
+
+		void operator /=(Vec<T> &rhs) {
+			_div(rhs);
+		}
 	};
 }
 
