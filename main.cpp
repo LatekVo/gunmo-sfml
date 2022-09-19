@@ -1,6 +1,11 @@
 #include <iostream>
 #include <memory>
 
+#include <SFML/Graphics.hpp>
+#include <SFML/Window.hpp>
+#include <SFML/System.hpp>
+
+
 #include "EngineEssentials.h"
 #include "ChunkManagement.h"
 #include "LibDraw.h"
@@ -15,6 +20,8 @@
  *  			Additionally, it acts as a means of storage for already loaded GO presets, they can be then used to spawn multiple identical GOs
  *
  *  LibDraw: An independent class/lib, reads other classes but isn't read by any. It's an optional graphical interface.
+ *
+ *  Any libraries that need to use external low level libraries are to be kept optional and replaceable.
  *
  */
 
@@ -35,8 +42,8 @@ int main() {
 
     env->data_GamePresets["enemy_placeholder"] = preset_enemyPlaceholder;
 
-    sf::Clock enemyClock;
-    int enemyDelay = 1000;
+	LibDraw drawAgent;
+	drawAgent.attach(window, env, chunkMan);
 
     while(window->isOpen()) {
 
@@ -77,39 +84,12 @@ int main() {
 
         // LOGIC, VIEW, DRAW
 
-		// todo: reverse this function, player(env) -> env(player)
-        player->updatePlayerInput(*env);
+		// after some thinking, having input gathering in GOs is better than in env, simply put, there is much more flexibility and multiplayer implementation ease when using this system.
+		player->updatePlayerInput(*env);
 
-		// todo: this function shouldn't have to feed itself
-        env->updateGameState(*env);
+		jmp_draw:
 
-        // debug: spawn enemy
-		// instead, create a spawner item prefab, that spawns/shoots the placeholder_enemy prefab (spawning is already supported i think)
-
-        // --
-
-        jmp_draw:
-
-        // menu logic and rest of drawing should end up here
-
-		/*
-        for (auto &each_object : env.data_activeObjects) {
-            each_object->draw(window);
-        }
-
-        for (auto &each_object : env.data_staticObjects) {
-            each_object->draw(window);
-        }
-		*/
-
-        // DEBUG OVERLAY
-        /*
-        sf::Text text;
-        text.setString("Hello world");
-        text.setCharacterSize(24); // in pixels, not points!
-        text.setFillColor(sf::Color::Green);
-        window.draw(text);
-        */
+		env->updateGameState();
 
         window->setView(window->getDefaultView());
         window->display();

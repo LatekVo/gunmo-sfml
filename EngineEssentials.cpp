@@ -46,20 +46,28 @@ void GameObject::centerView(sf::RenderWindow& rx) {
 */
 // only sets the object for targeting, may be used internally, functionality expanded in the main update function
 
-// todo: move this function to environment, as such: GO.playerInput(env) -> env.inputFromPlayer(GO)
-void GameObject::updatePlayerInput(Environment &ctx) {
+// this function can stay here, but needs to adapt a custom input method.
+void GameObject::updatePlayerInput(Environment &ctx, bool keyData[256]) {
+
+	// this function is here to convert an enum class value into integer
+	// unlike with a normal enum, this isn't done automatically for some utterly retarded reason :)
+	auto key = [](e_key val) {
+		return static_cast<int>(val);
+	};
 
 	float mov = movSpeed_max * ctx.getFrameAdjustment();
 	float xMov = 0;
 	float yMov = 0;
 
-	if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W))
+	if (keyData[key(e_key::W)])
 		yMov -= mov;
-	if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S))
+	if (keyData[key(e_key::S)])
 		yMov += mov;
-	if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A))
+
+	if (keyData[key(e_key::A)])
 		xMov -= mov;
-	if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D))
+
+	if (keyData[key(e_key::D)])
 		xMov += mov;
 
 	if (xMov != 0 && yMov != 0) {
@@ -194,8 +202,9 @@ void GameObject::update(Environment &ctx) {
 	if(movSpeed_max > 0.) _approachTarget(ctx);
 	if(attackRange > 0.) _attackTarget(ctx);
 
-	rotation_d = rotation - rotation_d;
-	position_d = position - position_d;
+	// todo: implement more vec option
+	// rotation_d = rotation - rotation_d;
+	// position_d = position - position_d;
 }
 
 void GameObject::drawInfo::setTexture(const std::string &_texturePath) {

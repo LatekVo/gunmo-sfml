@@ -23,12 +23,14 @@ float Environment::getFrameAdjustment() const {
 	return g_timeScale * g_currentFrameAdjustment * 1000;
 }
 
-void Environment::updateGameState(Environment &ctx) {
+void Environment::updateGameState() {
 	/* List of actions:
 		call update on every active object
 		update camera's position if needed (pan)
 	*/
 	for (auto &each_object : data_activeObjects) {
-		each_object->update(ctx);
+
+		// Should GOs really update themselves? Or should Env take on this responsibility?
+		each_object->update(*this);
 	}
 }

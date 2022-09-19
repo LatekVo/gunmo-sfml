@@ -50,7 +50,7 @@ enum class e_biome {
 // every supported key. keys themselves don't matter,
 // only thing that matters is KEY - VALUE relation to remain unchanged between all versions of this library
 enum class e_key {
-	A,
+	A = 1,
 	B,
 	C,
 	D,

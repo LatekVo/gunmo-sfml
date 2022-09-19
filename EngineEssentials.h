@@ -5,11 +5,6 @@
 #ifndef GUNMO_ENGINEESSENTIALS_H
 #define GUNMO_ENGINEESSENTIALS_H
 
-#include <SFML/Window.hpp>
-#include <SFML/Graphics.hpp>
-#include <SFML/System.hpp>
-#include <SFML/Config.hpp>
-
 #include <array>
 #include <vector>
 #include <list>
@@ -24,7 +19,7 @@
 class Environment; // environment will actually also control all the watch-dogged data and objects that need to be constantly updated
 class GameObject;
 
-// todo: to be moved to another class file
+// todo: to be moved to another class file, manageable enough to be .hpp
 namespace Math {
 	template<typename T>
 	class Vec {
@@ -68,8 +63,14 @@ namespace Math {
 	};
 }
 
-// movement and rotation, may be replaced with unit vectors to target
-
+namespace Time {
+	class Clock {
+	public:
+		void start();
+		void stop();
+		void restart();
+	};
+}
 
 // GameObject is universal, not only for 'real' objects, but for things like markings or bullets as well.
 
@@ -78,7 +79,7 @@ class Environment {
 public:
 	// game info & properties
 	float g_timeScale = 1.f;
-	sf::Clock g_delta;
+	Time::Clock g_delta;
 	float g_currentFrameAdjustment = 0;
 
 	// settings
@@ -104,7 +105,7 @@ public:
 	void addActiveObject(const std::shared_ptr<GameObject>& ptr_newGameObject);
 	void removeActiveObject(const std::shared_ptr<GameObject>& ptr_newGameObject);
 
-	void updateGameState(Environment &ctx); // passing self, this is dumb, there has to be a better way
+	void updateGameState();
 
 	std::map<std::string, GameObject> data_GamePresets; // holds copyable objects,
 
@@ -145,8 +146,8 @@ public:
 	float rotSpeed_max = 1; // in degrees, DONT USE RADS
 	float rotSpeed_accel = 0;
 
-	sf::Vector2f position {0,0};
-	sf::Vector2f position_d {0, 0};
+	Math::Vec<float> position {0,0};
+	Math::Vec<float> position_d {0, 0};
 	float rotation = 0; // deg, still less conversion will have to be done than when using rad up-front
 	float rotation_d = 0;
 	e_rotationType rotatingMode = e_rotationType::NONE;
@@ -176,8 +177,7 @@ public:
 
 	*/
 
-	void updatePlayerInput(Environment &ctx);
-
+	void updatePlayerInput(Environment &ctx, bool keyboardData[256]);
 
 	// only sets the object for targeting, may be used internally, functionality expanded in the main update function
 
@@ -200,6 +200,7 @@ public:
 	static int _getNewTarget(Environment &ctx);
 
 	GameObject() = default;
+
 };
 
 

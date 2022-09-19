@@ -21,6 +21,7 @@ public:
 		MOUSE = 2,
 	};
 
+	// even 128 should be enough
 	bool keyboard[256] = {false};
 	float mouse[2] = {0., 0.};
 
