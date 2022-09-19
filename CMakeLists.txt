@@ -15,7 +15,7 @@ add_executable(gunmo
         EngineEssentials.cpp
         Environment.cpp
         ChunkManagement.cpp
-        LibDraw.cpp ChunkManagement.h InputManagement.cpp InputManagement.h)
+        LibDraw.cpp ChunkManagement.h InputManagement.cpp InputManagement.h Math.hpp)
 
 # add libs you need
 set(SFML_LIBRARIES sfml-system sfml-graphics sfml-window)

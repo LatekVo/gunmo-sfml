@@ -192,7 +192,8 @@ void GameObject::update(Environment &ctx) {
 		}
 	}
 
-	//TODO: very important: before applying this logic, we need to make sure parent updates first
+	// TODO: very important: before applying this logic, we need to make sure parent updates first
+	// TODO: position should have an option to be stored relatively to the parent, relying on delta itself will lead to desyncs, float is terrible at preserving itself
 	if(!parentObject.expired()) {
 		position += parentObject.lock()->position_d;
 		rotation += parentObject.lock()->rotation_d;

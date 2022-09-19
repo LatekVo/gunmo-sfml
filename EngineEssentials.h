@@ -15,53 +15,12 @@
 
 #include "LayeredPerlin.h"
 #include "Constants.h"
+#include "Math.hpp"
 
 class Environment; // environment will actually also control all the watch-dogged data and objects that need to be constantly updated
 class GameObject;
 
 // todo: to be moved to another class file, manageable enough to be .hpp
-namespace Math {
-	template<typename T>
-	class Vec {
-
-		void _add(Vec<T> &val) {
-			x += val.x;
-			y += val.y;
-		}
-		void _sub(Vec<T> &val) {
-			x -= val.x;
-			y -= val.y;
-		}
-		void _mult(T val) {
-			x *= val;
-			y *= val;
-		}
-		void _div(T val) {
-			x /= val;
-			y /= val;
-		}
-
-	public:
-		T x = 0;
-		T y = 0;
-
-		void operator +=(Vec<T> &rhs) {
-			_add(rhs);
-		}
-
-		void operator -=(Vec<T> &rhs) {
-			_sub(rhs);
-		}
-
-		void operator *=(Vec<T> &rhs) {
-			_mult(rhs);
-		}
-
-		void operator /=(Vec<T> &rhs) {
-			_div(rhs);
-		}
-	};
-}
 
 namespace Time {
 	class Clock {
